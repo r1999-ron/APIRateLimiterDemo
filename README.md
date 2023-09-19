@@ -43,7 +43,7 @@ Code Structure:
 
 Overall Flow:
 
-When the program starts, it reads expressions from the user and adds them to a queue. A separate processing thread retrieves expressions from the queue and sends them to an external API for evaluation while respecting rate limits. Results are logged, and the program gracefully exits when all expressions are processed.
+When the program starts, it reads expressions from the user and adds them to a queue. A separate processing thread asynchronously retrieves expressions from the queue and sends them to an external API for evaluation while respecting rate limits. Results are logged, and the program gracefully exits when all expressions are processed.
 
 Dependencies:
 - Java (JDK 8+)
