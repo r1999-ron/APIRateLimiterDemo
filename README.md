@@ -31,11 +31,11 @@ Features:
 Code Structure
 The project follows the standard Java package structure and consists of the following key components:
 
-ExpressionEvaluatorApp: The main application class that orchestrates the entire process.
-Expression: A class representing an expression to be evaluated.
-acquireToken(): Method implementing the token bucket algorithm for rate limiting.
-callApi(): Method for making HTTP requests to an external math evaluation API.
-Logging: Extensive logging is used to record processing details and errors.
+- ExpressionEvaluatorApp: The main application class that orchestrates the entire process.
+- Expression: A class representing an expression to be evaluated.
+- acquireToken(): Method implementing the token bucket algorithm for rate limiting.
+- callApi(): Method for making HTTP requests to an external math evaluation API.
+- Logging: Extensive logging is used to record processing details and errors.
 
 Dependencies:
 - Java (JDK 8+)
