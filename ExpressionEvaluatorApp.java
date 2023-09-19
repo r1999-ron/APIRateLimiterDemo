@@ -94,7 +94,9 @@ public class ExpressionEvaluatorApp {
 			logger.log(Level.SEVERE, "Processing thread was interrupted.", e);
 		}
 	}
-
+        /*
+	Responsible for acquiring a token to send an API request
+        */
 	private boolean acquireToken() {
 		long currentTime = System.currentTimeMillis();
 		long elapsedTime = currentTime - lastRequestTime.getAndSet(currentTime);
@@ -116,6 +118,9 @@ public class ExpressionEvaluatorApp {
 		}
 	}
 
+	/*
+         Make an API call and return the response
+        */
 	private String callApi(String expression) {
 		try {
 			URL url = new URL(API_ENDPOINT + "?expr=" + expression);
