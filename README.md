@@ -32,14 +32,18 @@ Features:
 
 - Logging: Comprehensive logging captures processing details and potential errors.
 
-Code Structure
-The project follows the standard Java package structure and consists of the following key components:
+Code Structure:
+ The project follows the standard Java package structure and consists of the following key components:
 
 - ExpressionEvaluatorApp: The main application class that orchestrates the entire process.
 - Expression: A class representing an expression to be evaluated.
 - acquireToken(): Method implementing the token bucket algorithm for rate limiting.
 - callApi(): Method for making HTTP requests to an external math evaluation API.
 - Logging: Extensive logging is used to record processing details and errors.
+
+Overall Flow:
+
+When the program starts, it reads expressions from the user and adds them to a queue. A separate processing thread retrieves expressions from the queue and sends them to an external API for evaluation while respecting rate limits. Results are logged, and the program gracefully exits when all expressions are processed.
 
 Dependencies:
 - Java (JDK 8+)
