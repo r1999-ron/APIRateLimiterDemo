@@ -1,2 +1,12 @@
 # APIRateLimiterDemo
-This Java application allows you to evaluate mathematical expressions while respecting API rate limits. It provides efficient processing of expressions and includes rate control features based on the token bucket algorithm.
+Math Expression Rate Limiter
+
+This Java project is an Expression Evaluator that allows users to input mathematical expressions for evaluation. It employs multi-threading, a token bucket algorithm, and network communication to process expressions efficiently.
+
+Key Features:
+- Rate limits API requests to ensure compliance with external API restrictions.
+- Processes mathematical expressions with efficiency and accuracy.
+- Supports queuing and token bucket algorithm for rate control.
+
+Dependencies:
+- Java (JDK 8+)
