@@ -15,22 +15,17 @@ import java.util.logging.Logger;
 
 public class ExpressionEvaluatorApp {
 	private static final String API_ENDPOINT = "http://api.mathjs.org/v4/";
-	private static final int MAX_API_REQUESTS_PER_SECOND = 50;
-	private static final int DESIRED_EXPRESSIONS_PER_SECOND = 500;
-	private static final int QUEUE_CAPACITY = 1000; // Adjust the capacity as needed
+	private static final int MAX_API_REQUESTS_PER_SECOND = 50; // Adjust as needed
+	private static final int DESIRED_EXPRESSIONS_PER_SECOND = 5000; // Adjust as needed
+	private static final int QUEUE_CAPACITY = 1000;
 
-	private LinkedBlockingQueue<Expression> expressionQueue;
-	private ExecutorService executorService;
-	private Logger logger;
+	private LinkedBlockingQueue<Expression> expressionQueue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
+	private ExecutorService executorService = Executors
+			.newFixedThreadPool(Math.min(MAX_API_REQUESTS_PER_SECOND, DESIRED_EXPRESSIONS_PER_SECOND));
+	private Logger logger = Logger.getLogger(ExpressionEvaluatorApp.class.getName());
 	private AtomicLong lastRequestTime = new AtomicLong(System.currentTimeMillis());
-	private AtomicLong tokens = new AtomicLong(0);
-
-	public ExpressionEvaluatorApp() {
-		expressionQueue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
-		int maxThreads = Math.min(MAX_API_REQUESTS_PER_SECOND, DESIRED_EXPRESSIONS_PER_SECOND);
-		executorService = Executors.newFixedThreadPool(maxThreads);
-		logger = Logger.getLogger(ExpressionEvaluatorApp.class.getName());
-	}
+	private AtomicLong tokens = new AtomicLong(MAX_API_REQUESTS_PER_SECOND); // Initialize with the maximum tokens
+	private AtomicLong expressionCounter = new AtomicLong(0);
 
 	public void start() {
 		Scanner scanner = new Scanner(System.in);
@@ -49,29 +44,9 @@ public class ExpressionEvaluatorApp {
 		} while (!expression.equals("end"));
 
 		// Start a thread to process expressions from the queue
-		Thread processingThread = new Thread(() -> {
-			while (true) {
-				try {
-					Expression expr = expressionQueue.take();
-					if (expr.getExpression().equals("end")) {
-						break;
-					}
-					if (acquireToken()) {
-						String result = callApi(expr.getExpression());
-						expr.setResult(result);
-						logger.log(Level.INFO, expr.getExpression() + " => " + result);
-					} else {
-						logger.log(Level.WARNING, "Rate limit exceeded for expression: " + expr.getExpression());
-					}
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-					break;
-				}
-			}
-		});
+		Thread processingThread = new Thread(this::processExpressions);
 		processingThread.start();
 
-		// Add "end" to the queue to signal the end of processing
 		try {
 			expressionQueue.put(new Expression("end"));
 		} catch (InterruptedException e) {
@@ -87,28 +62,51 @@ public class ExpressionEvaluatorApp {
 			scanner.close();
 		}
 
-		// Wait for the processing thread to complete
 		try {
 			processingThread.join();
 		} catch (InterruptedException e) {
 			logger.log(Level.SEVERE, "Processing thread was interrupted.", e);
 		}
 	}
-        /*
-	Responsible for acquiring a token to send an API request
-        */
-	private boolean acquireToken() {
+
+	private void processExpressions() {
+		while (true) {
+			try {
+				Expression expr = expressionQueue.take();
+				if (expr.getExpression().equals("end")) {
+					break;
+				}
+				long currentExpressionNumber = expressionCounter.incrementAndGet(); // Increment the counter
+				if (acquireToken()) {
+					String result = callApi(expr.getExpression());
+					expr.setResult(result);
+					logger.log(Level.INFO,
+							"Expression " + currentExpressionNumber + ": " + expr.getExpression() + " => " + result);
+				} else {
+					logger.log(Level.WARNING, "Rate limit exceeded (HTTP 429) for Expression " + currentExpressionNumber
+							+ ": " + expr.getExpression());
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				break;
+			}
+		}
+	}
+
+	private synchronized boolean acquireToken() {
 		long currentTime = System.currentTimeMillis();
 		long elapsedTime = currentTime - lastRequestTime.getAndSet(currentTime);
 
 		// Calculate how many tokens to add based on elapsed time.
-		long tokensToAdd = elapsedTime * MAX_API_REQUESTS_PER_SECOND / 1000;
+		long tokensToAdd = (elapsedTime * MAX_API_REQUESTS_PER_SECOND) / 1000;
 
 		// Ensure tokens don't exceed the maximum.
 		tokensToAdd = Math.min(tokensToAdd, MAX_API_REQUESTS_PER_SECOND);
 
-		// Add tokens to the bucket.
-		tokens.getAndAdd(tokensToAdd);
+		// Refill tokens if needed.
+		if (tokens.get() < MAX_API_REQUESTS_PER_SECOND) {
+			tokens.addAndGet(tokensToAdd);
+		}
 
 		if (tokens.get() >= 1) {
 			tokens.decrementAndGet(); // Consume one token.
@@ -118,9 +116,6 @@ public class ExpressionEvaluatorApp {
 		}
 	}
 
-	/*
-         Make an API call and return the response
-        */
 	private String callApi(String expression) {
 		try {
 			URL url = new URL(API_ENDPOINT + "?expr=" + expression);
@@ -129,6 +124,7 @@ public class ExpressionEvaluatorApp {
 			connection.setConnectTimeout(5000); // Set a connection timeout (5 seconds)
 
 			int responseCode = connection.getResponseCode();
+			logger.log(Level.INFO, "Response Code: " + responseCode);
 			if (responseCode == HttpURLConnection.HTTP_OK) {
 				try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
 					StringBuilder response = new StringBuilder();
@@ -151,6 +147,5 @@ public class ExpressionEvaluatorApp {
 	public static void main(String[] args) {
 		ExpressionEvaluatorApp app = new ExpressionEvaluatorApp();
 		app.start();
-
 	}
 }
