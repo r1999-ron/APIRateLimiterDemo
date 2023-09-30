@@ -41,6 +41,22 @@ Code Structure:
 - callApi(): Method for making HTTP requests to an external math evaluation API.
 - Logging: Extensive logging is used to record processing details and errors.
 
+## Use of Concurrency
+Concurrency in the provided code is primarily managed using Java's ExecutorService and a blocking queue.
+
+Here's how concurrency is maintained in the code:
+
+ExecutorService: The code creates an ExecutorService using Executors.newFixedThreadPool. This thread pool manages a fixed number of worker threads (up to the specified limit), allowing concurrent execution of tasks. In this case, the number of worker threads is determined by Math.min(MAX_API_REQUESTS_PER_SECOND, DESIRED_EXPRESSIONS_PER_SECOND). This means it will use up to the smaller of the two values as the number of worker threads.
+
+Blocking Queue: The LinkedBlockingQueue named expressionQueue is used to store Expression objects that represent mathematical expressions. This queue allows multiple producer threads (the main thread and the processing thread) to add expressions and a single consumer thread (the processing thread) to take expressions for processing. It effectively decouples the production and consumption of expressions, allowing for concurrency.
+
+Thread Management: The main thread is responsible for reading user input and adding expressions to the expressionQueue. The processing of expressions is handled by the worker threads in the ExecutorService. Each worker thread takes expressions from the queue and processes them concurrently.
+
+Synchronization: The acquireToken method uses synchronized blocks to ensure thread safety when checking and updating token counts, which are used to enforce the rate limit.
+
+Overall, the combination of an ExecutorService, a blocking queue, and synchronized methods helps maintain concurrency in the application. The main thread and worker threads can work in parallel to process expressions while respecting rate limits and ensuring thread safety where necessary.
+
+
 Overall Flow:
 
 When the program starts, it reads expressions from the user and adds them to a queue. A separate processing thread asynchronously retrieves expressions from the queue and sends them to an external API for evaluation while respecting rate limits. Results are logged, and the program gracefully exits when all expressions are processed.
